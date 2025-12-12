@@ -93,6 +93,7 @@ def companies_list(request):
     return render(request, 'companies/companies_list.html', context)
 
 
+@login_required(login_url='login')
 def public_view(request):
     """
     Renderar den publika vyn för att visa företag

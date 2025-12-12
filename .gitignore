@@ -64,6 +64,7 @@ todo/enrich_logo_urls.py
 /todo/clusters_testing
 /todo/gammalt
 import_updates/companies_new_data.numbers
+import_data.csv
 
 # Archive (development artifacts)
 archive/
