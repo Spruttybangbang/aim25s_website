@@ -14,9 +14,9 @@ def login_view(request):
     """
     Hanterar inloggning för studenter
     """
-    # Om användaren redan är inloggad, redirect till companies_list
+    # Om användaren redan är inloggad, redirect till public_view
     if request.user.is_authenticated:
-        return redirect('companies_list')
+        return redirect('public_view')
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -26,7 +26,7 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            return redirect('companies_list')
+            return redirect('public_view')
         else:
             return render(request, 'companies/login.html', {
                 'error': 'Ogiltigt användarnamn eller lösenord'
