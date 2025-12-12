@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment variables (viktigt - spara inte API keys i git!)
+.env
+
+# Databaser (ta bort de rader du vill versionshantera)
+*.db
+*.db-journal
+*.sqlite3
+ai_companies_old.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup-filer
+*_backup*.db
+
+# Export/Import CSV-filer
+todo/*.csv
+import_updates/*.csv
+import_updates/completed/*.csv
+todo/fix_location_data.py
+todo/enrich_logo_urls.py
+/todo/clusters_testing
+/todo/gammalt
+import_updates/companies_new_data.numbers
+
+# Archive (development artifacts)
+archive/
+
+# Claude Code
+.claude/

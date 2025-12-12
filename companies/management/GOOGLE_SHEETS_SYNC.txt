@@ -1,0 +1,311 @@
+================================================================================
+GOOGLE SHEETS SYNKRONISERING - ANVÄNDARGUIDE
+================================================================================
+
+Detta kommando låter dig synkronisera företagsdata från Google Sheets till
+Django-databasen.
+
+✅ ENKEL SETUP MED GOOGLE CLOUD API KEY (tar 5 minuter)
+✅ FUNGERAR FÖR PUBLIKA SHEETS
+✅ INGEN OAUTH KRÄVS
+
+================================================================================
+SNABBSTART
+================================================================================
+
+1. SKAFFA GOOGLE CLOUD API KEY (engångsinställning)
+
+   a) Gå till Google Cloud Console:
+      https://console.cloud.google.com/
+
+   b) Skapa ett nytt projekt (eller använd befintligt):
+      - Klicka på projektlistan längst upp
+      - Klicka "New Project"
+      - Namn: "Django Sheets Sync" (eller vad du vill)
+      - Klicka "Create"
+
+   c) Aktivera Google Sheets API:
+      - Klicka på hamburger-menyn (☰)
+      - Gå till "APIs & Services" → "Library"
+      - Sök efter "Google Sheets API"
+      - Klicka på "Google Sheets API"
+      - Klicka "Enable"
+
+   d) Skapa API Key:
+      - Gå till "APIs & Services" → "Credentials"
+      - Klicka "Create Credentials" → "API Key"
+      - En API key skapas automatiskt - KOPIERA DEN!
+      - (Valfritt men rekommenderat) Klicka "Restrict Key":
+        * Under "API restrictions", välj "Restrict key"
+        * Välj endast "Google Sheets API"
+        * Klicka "Save"
+
+   e) Sätt miljövariabel:
+      export GOOGLE_SHEETS_API_KEY="din-api-key-här"
+
+      VIKTIGT: Denna variabel måste vara satt varje gång du kör kommandot.
+      Se "PERMANENT SETUP MED .ENV FIL" nedan för en permanent lösning.
+
+2. GÖR SHEETET PUBLIKT (VIKTIGT!)
+   - Öppna ditt Google Sheet
+   - Klicka "Share" → "Anyone with the link can view"
+   - Detta är obligatoriskt för att kommandot ska fungera
+
+3. KOPIERA SHEET ID
+   Från URL:en:
+   https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+
+   Sheet ID = 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms
+
+4. TESTA MED DRY-RUN (rekommenderas först!)
+   python3 manage.py sync_sheets --sheet-id="DITT_SHEET_ID" --dry-run
+
+5. SYNKRONISERA PÅ RIKTIGT
+   python3 manage.py sync_sheets --sheet-id="DITT_SHEET_ID"
+
+================================================================================
+PERMANENT SETUP MED .ENV FIL (REKOMMENDERAT)
+================================================================================
+
+För att slippa sätta miljövariabeln varje gång:
+
+1. Skapa en .env fil i projektets rotmapp:
+
+   # .env
+   GOOGLE_SHEETS_API_KEY=din-api-key-här
+
+2. Lägg till .env i .gitignore (VIKTIGT - spara inte API key i git!):
+
+   echo ".env" >> .gitignore
+
+3. Installera python-dotenv:
+
+   pip3 install python-dotenv
+
+4. API keyn laddas nu automatiskt när du kör kommandot
+
+================================================================================
+KOMMANDOALTERNATIV
+================================================================================
+
+Obligatorisk:
+  --sheet-id="ID"          Google Sheet ID från URL:en
+
+Valfria:
+  --range="Sheet1!A:BN"    Vilket område som ska läsas (default: Sheet1!A:BN)
+  --dry-run                Visa preview utan att göra ändringar
+  --auto-approve           Hoppa över alla bekräftelseprompts
+
+================================================================================
+EXEMPEL
+================================================================================
+
+# Test utan att ändra något i databasen
+python3 manage.py sync_sheets \
+  --sheet-id="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" \
+  --dry-run
+
+# Synkronisera med bekräftelser
+python3 manage.py sync_sheets \
+  --sheet-id="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+
+# Synkronisera utan prompts (automation)
+python3 manage.py sync_sheets \
+  --sheet-id="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" \
+  --auto-approve
+
+# Synkronisera från ett annat sheet/range
+python3 manage.py sync_sheets \
+  --sheet-id="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" \
+  --range="Sheet2!A:Z"
+
+================================================================================
+VAD HÄNDER NÄR DU KÖRT KOMMANDOT?
+================================================================================
+
+Kommandot kommer att:
+
+1. HÄMTA DATA från Google Sheets
+2. ANALYSERA vilka rader som ska skapas/uppdateras
+3. VISA PREVIEW av ändringar:
+   - Antal nya företag som kommer skapas
+   - Antal företag som kommer uppdateras
+   - Konflikter som upptäckts
+   - Rader utan ID
+   - Nya kolumner i sheetet
+
+4. BER OM BEKRÄFTELSE (om inte --auto-approve är satt)
+5. SYNKRONISERAR data till databasen
+
+================================================================================
+VIKTIGT ATT VETA
+================================================================================
+
+✓ ENVÄGSSYNKNING
+  - Google Sheets → Django
+  - Ändringar i Django påverkar INTE Google Sheets
+
+✓ ID-BASERAD MATCHNING
+  - Om ID finns i Django → uppdaterar befintlig rad
+  - Om ID saknas i Django → skapar ny rad
+  - Om rad i Sheets saknar ID → genererar nytt ID
+
+✓ KONFLIKTHANTERING
+  - Kommandot upptäcker konflikter i viktiga fält (NAMN, SCB_ORGNR, BESKRIVNING)
+  - Du får möjlighet att:
+    * Fortsätta (Google Sheets vinner)
+    * Hoppa över konfliktrader
+    * Avbryta helt
+
+✓ NYA KOLUMNER
+  - Om nya kolumner upptäcks i sheetet
+  - Får du möjlighet att välja om de ska importeras
+  - Kräver migrering för att lägga till i modellen
+
+✓ SÄKERHET
+  - Använder transaction.atomic()
+  - Automatisk rollback vid fel
+  - Inga partiella ändringar
+
+================================================================================
+SHEET-STRUKTUR
+================================================================================
+
+Första raden i sheetet måste innehålla headers som matchar fältnamn:
+
+Exempel:
+  id, NAMN, SAJT, BESKRIVNING, STAD, STORSTOCKHOLM, URL_LOGOTYP,
+  BRANSCHKLUSTER_LITEN, SEKTOR_SEMANTISK_MODELL, AI_FÖRMÅGA_SEMANTISK_MODELL,
+  SCB_ORGNR, SCB_NAMN, SCB_ANSTÄLLDA, ...
+
+Alla 64 fält från AICompany-modellen kan användas.
+
+================================================================================
+FELMEDDELANDEN
+================================================================================
+
+"GOOGLE_SHEETS_API_KEY miljövariabel saknas!"
+  → Du har inte satt API key miljövariabeln
+  → Kör: export GOOGLE_SHEETS_API_KEY="din-api-key"
+  → ELLER skapa en .env fil (se "PERMANENT SETUP MED .ENV FIL" ovan)
+
+"HTTP 403: API key ogiltig eller saknar behörighet"
+  → Din API key är inte korrekt
+  → Kontrollera att du kopierat hela API keyen korrekt
+  → Kontrollera att Google Sheets API är aktiverad i Google Cloud Console
+  → Se steg 1c i SNABBSTART för att aktivera API:et
+
+"Inga data hittades i sheetet"
+  → Kontrollera att Sheet ID är korrekt
+  → Kontrollera att sheetet är publikt ("Anyone with the link can view")
+  → Kontrollera att range är korrekt
+
+"Fel vid hämtning från Google Sheets: HTTP 404"
+  → Sheet ID är fel
+  → Kontrollera URL:en och kopiera Sheet ID:t igen
+
+"Fel vid hämtning från Google Sheets: RequestException"
+  → Kontrollera din internetanslutning
+  → Testa att öppna Google Sheets i webbläsaren
+
+"X konflikter upptäcktes"
+  → Befintlig data i Django skiljer sig från Sheets
+  → Välj om du vill fortsätta, hoppa över, eller avbryta
+
+"X rader saknar ID"
+  → Vissa rader i Sheets saknar ID-nummer
+  → Välj om nya ID:n ska genereras automatiskt
+
+"X nya kolumner upptäcktes"
+  → Sheetet innehåller kolumner som inte finns i modellen
+  → Välj om de ska importeras (kräver migrering)
+
+================================================================================
+TIPS & TRICKS
+================================================================================
+
+1. TESTA ALLTID MED --dry-run FÖRST
+   Detta visar vad som kommer hända utan att ändra något
+
+2. SÄKERHETSKOPIERA DATABASEN FÖRE STORA ÄNDRINGAR
+   cp ai_companies.db ai_companies_backup_$(date +%Y%m%d).db
+
+3. ANVÄND --auto-approve FÖR AUTOMATION
+   Lägg till i crontab för schemalagd synkning:
+   0 2 * * * cd /path/to/project && python3 manage.py sync_sheets \
+     --sheet-id="YOUR_ID" --auto-approve >> /var/log/sheets_sync.log 2>&1
+
+4. EXPORTERA FRÅN DJANGO ADMIN FÖRST
+   Använd "Exportera markerade företag till CSV" i admin
+   Importera till Google Sheets för att få rätt struktur
+
+5. KOLLA LOGGEN EFTER SYNKNING
+   Kommandot visar detaljerad information om vad som hände
+
+================================================================================
+SUPPORT
+================================================================================
+
+Vid problem:
+1. VIKTIGAST: Kontrollera att du har satt API key!
+   - Kör: echo $GOOGLE_SHEETS_API_KEY
+   - Om det är tomt, sätt variabeln: export GOOGLE_SHEETS_API_KEY="din-key"
+   - Se "PERMANENT SETUP MED .ENV FIL" för permanent lösning
+
+2. Kontrollera att Google Sheets API är aktiverad:
+   - Gå till https://console.cloud.google.com/
+   - "APIs & Services" → "Library"
+   - Sök efter "Google Sheets API" - ska stå "Enabled"
+
+3. Kontrollera att sheetet är publikt!
+   - Klicka "Share" → "Anyone with the link can view"
+
+4. Kontrollera att alla dependencies är installerade:
+   pip3 install -r requirements.txt
+   (Du behöver: Django, requests, python-dotenv)
+
+5. Verifiera att Sheet ID är korrekt
+   - Kopiera från URL:en mellan /d/ och /edit
+
+6. Testa med --dry-run för att se vad som skulle hända
+
+7. Kolla Django-loggar för felmeddelanden
+
+================================================================================
+EXEMPEL PÅ KOMPLETT WORKFLOW
+================================================================================
+
+# Steg 0: Setup (engångsinställning)
+1. Skaffa Google Cloud API key (se steg 1 i SNABBSTART)
+2. Sätt miljövariabel: export GOOGLE_SHEETS_API_KEY="din-key"
+   ELLER skapa .env fil med API keyn
+
+# Steg 1: Exportera nuvarande data från Django Admin
+1. Gå till http://127.0.0.1:8000/admin/
+2. Välj "Företagsdatabas"
+3. Markera några företag
+4. Välj "Exportera markerade företag till CSV"
+
+# Steg 2: Importera CSV till Google Sheets
+1. Öppna Google Sheets
+2. File → Import → Upload
+3. Ladda upp CSV-filen
+4. Gör sheetet publikt: "Share" → "Anyone with the link can view"
+
+# Steg 3: Gör ändringar i Google Sheets
+- Uppdatera befintliga rader
+- Lägg till nya rader
+
+# Steg 4: Testa synkning med dry-run
+python3 manage.py sync_sheets --sheet-id="DITT_ID" --dry-run
+
+# Steg 5: Synkronisera på riktigt
+python3 manage.py sync_sheets --sheet-id="DITT_ID"
+
+# Steg 6: Verifiera i Django Admin
+Kontrollera att ändringarna kommit med
+
+================================================================================
+VERSION: 1.0
+SKAPAD: 2025-12-09
+================================================================================

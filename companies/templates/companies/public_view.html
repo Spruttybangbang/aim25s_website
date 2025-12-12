@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-företag i Stockholm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700;900&family=Source+Serif+4:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="/static/companies/css/public_view.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Svenska företag som använder AI & ML</h1>
+            <p class="subtitle">Version 1.0 | Senast uppdaterad 2025-12-12</p>
+
+            <!-- Global action icons -->
+            <div class="global-actions">
+                <button class="global-icon-btn" onclick="openHelpModal()" title="Hjälp att förstå databasen" aria-label="Hjälp">
+                    <span class="material-symbols-outlined icon">help_center</span>
+                </button>
+                <button class="global-icon-btn" onclick="openSuggestionModal()" title="Föreslå nytt företag" aria-label="Föreslå företag">
+                    <span class="material-symbols-outlined icon">add_box</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Unified Search & Filter Section (3-column layout) -->
+        <div class="unified-filter-section">
+            <div class="filter-grid">
+                <!-- Column 1: Dropdowns -->
+                <div class="filter-column dropdowns-column">
+                    <select id="branschFilter" class="filter-dropdown-enhanced">
+                        <option value="">Filtrera på bransch</option>
+                    </select>
+
+                    <select id="aiInriktningFilter" class="filter-dropdown-enhanced">
+                        <option value="">Filtrera på AI-inriktning</option>
+                    </select>
+
+                    <select id="anstalldaFilter" class="filter-dropdown-enhanced">
+                        <option value="">Filtrera på antal anställda</option>
+                    </select>
+
+                    <select id="omsattningFilter" class="filter-dropdown-enhanced">
+                        <option value="">Filtrera på omsättning</option>
+                    </select>
+                </div>
+
+                <!-- Column 2: Search & Checkboxes -->
+                <div class="filter-column search-column">
+                    <input type="text" id="searchInput"
+                           placeholder="Sök företag, stad, kommun..." autocomplete="off">
+
+                    <div class="search-buttons-row">
+                        <button id="searchButton">Sök</button>
+                        <button id="luckyButton" class="btn-lucky">
+                            <span class="btn-lucky-text">I feel lucky</span>
+                            <span class="btn-lucky-loading" style="display: none;">
+                                <span class="loading-dots">Slumpar</span>
+                            </span>
+                        </button>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="stockholmFilter">
+                            <span>Endast stor-Stockholm</span>
+                        </label>
+
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="arbetsgivareFilter">
+                            <span>Endast registrerade arbetsgivare</span>
+                        </label>
+                    </div>
+
+                    <button id="clearFilters" class="btn-clear-filters">Rensa alla filter</button>
+                </div>
+
+                <!-- Column 3: Chart -->
+                <div class="filter-column stats-column">
+                    <!-- Batteristapel visualisering -->
+                    <div class="battery-container">
+                        <!-- Batteristapel -->
+                        <div class="battery-bar">
+                            <div class="battery-background"></div>
+                            <div class="battery-fill" id="batteryFill" style="height: 100%;"></div>
+                            <div class="battery-counter" id="batteryCounter">0</div>
+                        </div>
+                        <!-- Label under stapeln -->
+                        <div class="battery-label">Antal företag</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Filter Pills Section (NEW) -->
+        <div id="activeFiltersContainer" class="active-filters-container" style="display: none;">
+            <div class="active-filters-pills" id="activeFiltersPills">
+                <!-- Pills generated dynamically -->
+            </div>
+        </div>
+
+        <!-- Legacy stats element (kept for compatibility) -->
+        <div style="display: none;">
+            <span id="totalCompanies">Laddar...</span>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="loadingSpinner" class="loading">
+            <div class="spinner"></div>
+            <p>Laddar företag...</p>
+        </div>
+
+        <!-- Error message -->
+        <div id="errorMessage" class="error-message" style="display: none;">
+            <p>Ett fel uppstod vid laddning av data. Försök igen.</p>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="table-container desktop-view">
+            <table id="companiesTable">
+                <thead>
+                    <tr id="tableHeaders">
+                        <!-- Headers will be populated dynamically -->
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="cards-container mobile-view" id="mobileCards">
+            <!-- Cards will be populated dynamically -->
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination">
+            <button id="prevPage" disabled>Föregående</button>
+            <span id="pageInfo">Sida 1 av 1</span>
+            <button id="nextPage" disabled>Nästa</button>
+        </div>
+    </div>
+
+    <!-- Modal for Company Details -->
+    <div id="companyModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalBody">
+                <!-- Company details will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Error Reporting -->
+    <div id="errorReportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeErrorReportModal()">&times;</span>
+            <div id="errorReportBody">
+                <h2>Rapportera fel</h2>
+                <p class="error-report-subtitle">Hjälp oss förbättra informationen om <span id="errorCompanyName"></span></p>
+
+                <form id="errorReportForm">
+                    <input type="hidden" id="errorCompanyId" name="company_id">
+
+                    <div class="form-group">
+                        <label for="errorType">Typ av fel *</label>
+                        <select id="errorType" name="error_type" required>
+                            <option value="">Välj feltyp...</option>
+                            <option value="incorrect_info">Felaktig information</option>
+                            <option value="company_not_exist">Företaget finns ej</option>
+                            <option value="missing_data">Saknad data</option>
+                            <option value="other">Annat</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="errorDescription">Beskrivning av felet *</label>
+                        <textarea id="errorDescription" name="description" rows="4" required placeholder="Beskriv vad som är fel..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="errorSuggestion">Förslag på korrigering</label>
+                        <textarea id="errorSuggestion" name="suggestion" rows="3" placeholder="Om du vet den korrekta informationen, skriv den här..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeErrorReportModal()">Avbryt</button>
+                        <button type="submit" class="btn-primary">Skicka felanmälan</button>
+                    </div>
+                </form>
+
+                <div id="errorReportSuccess" style="display: none;">
+                    <p class="success-message">✓ Tack för din felanmälan! Vi kommer att granska den så snart som möjligt.</p>
+                    <button class="btn-primary" onclick="closeErrorReportModal()">Stäng</button>
+                </div>
+
+                <div id="errorReportError" style="display: none;">
+                    <p class="error-message">✗ Något gick fel. Försök igen senare.</p>
+                    <button class="btn-secondary" onclick="closeErrorReportModal()">Stäng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content modal-wide">
+            <span class="close" onclick="closeHelpModal()">&times;</span>
+            <div id="helpModalBody">
+                <h2>Hjälp att förstå databasen</h2>
+
+                <div class="help-content">
+                    <p>Denna databas har samlat företag från officiella källor (såsom AI Sweden och EU) som listar AI-företag i Sverige. Denna data has sedan korskörts med Bolagsverkets information på företagen och sedan harmoniserats med hjälp av generativ AI.</p>
+
+                    <p>Databasen kan innehålla fel eller gammal data, om du upptäcker något fel får du gärna rapportera det. Du kan också föreslå företag som bör finnas med på listan, du hittar det formuläret bredvid ikonen till denna hjälptext.</p>
+
+                    <h3>Förklaringar</h3>
+
+                    <h4>Bransch</h4>
+                    <p>Denna etikett beskriver företagets primära kundgrupp eller den industri där deras lösning gör mest nytta. Vi delar in detta i vertikala branscher och horisontella teknikområden.</p>
+
+                    <h5>Vertikala kluster (Marknader)</h5>
+                    <p>Dessa företag applicerar AI för att lösa specifika problem inom en viss industri.</p>
+                    <ul>
+                        <li><strong>Energy & ClimateTech:</strong> Lösningar för energisystem, hållbarhet, miljöanalys och grön teknik (Cleantech).</li>
+                        <li><strong>FinTech:</strong> Bank, finans och försäkring. Innefattar bedrägeridetektion, riskanalys och automatiserad ekonomihantering.</li>
+                        <li><strong>HealthTech & Life Science:</strong> Vård, medicinsk diagnostik, läkemedelsutveckling (Drug Discovery) och bioteknik.</li>
+                        <li><strong>Industrial & Manufacturing:</strong> Tillverkningsindustri, robotik, fabriksautomation och "Industry 4.0".</li>
+                        <li><strong>Logistics & Mobility:</strong> Allt som rör förflyttning av varor och människor. Innefattar fordonsutveckling, autonoma system, transportplanering och supply chain-optimering.</li>
+                        <li><strong>Public Sector:</strong> Lösningar riktade mot offentlig sektor, myndigheter, kommuner, försvar och samhällsservice.</li>
+                        <li><strong>Retail & E-commerce:</strong> Detaljhandel och e-handel. Fokus på kundanalys, lagerhantering och köpupplevelser.</li>
+                    </ul>
+
+                    <h5>Horisontella kluster (Teknik & Tjänster)</h5>
+                    <p>Dessa företag erbjuder teknik eller tjänster som kan användas av flera olika branscher.</p>
+                    <ul>
+                        <li><strong>Consulting & Enterprise:</strong> Konsultbolag som hjälper andra att implementera AI, samt breda affärssystem (SaaS) som effektiviserar interna processer (HR, sälj, admin).</li>
+                        <li><strong>Core AI/ML & Research:</strong> Företag som bygger själva grundtekniken, plattformar för maskininlärning (MLOps) eller bedriver tung forskning.</li>
+                        <li><strong>GenAI & NLP:</strong> Specialister inom språkteknologi och generativ AI. Här hittar du textanalys, chattbotar och verktyg för att skapa innehåll.</li>
+                    </ul>
+
+                    <h4>AI-inriktningar (Teknik)</h4>
+                    <p>Denna kolumn beskriver <em>vad</em> AI-tekniken faktiskt gör. Ett företag kan ha en eller flera inriktningar.</p>
+
+                    <h5>Analys & Beslut</h5>
+                    <ul>
+                        <li><strong>Anomaly & Risk Detection:</strong> Identifierar avvikelser i data, vanligt inom cybersäkerhet och bedrägeribekämpning.</li>
+                        <li><strong>Decision Support Systems:</strong> System som analyserar komplex data för att hjälpa människor fatta bättre beslut.</li>
+                        <li><strong>Graph Analytics / Knowledge Graphs:</strong> Analyserar relationer mellan datapunkter i nätverk.</li>
+                        <li><strong>Predictive Analytics & Forecasting:</strong> Använder historisk data för att förutspå framtida händelser, t.ex. försäljning eller underhållsbehov.</li>
+                        <li><strong>Recommendation Engines:</strong> Algoritmer som föreslår produkter eller innehåll (t.ex. "Rekommenderat för dig").</li>
+                        <li><strong>Sentiment & Emotion Analysis:</strong> Tolkar känslor och attityder i text eller röst.</li>
+                    </ul>
+
+                    <h5>Datorseende (Computer Vision)</h5>
+                    <ul>
+                        <li><strong>Autonomous Navigation (SLAM):</strong> Teknik för att maskiner ska kunna navigera själva i rummet.</li>
+                        <li><strong>Facial Recognition & Biometrics:</strong> Identifiering av personer via ansikte eller andra biometriska data.</li>
+                        <li><strong>General Computer Vision:</strong> Datorns förmåga att tolka och förstå bilder.</li>
+                        <li><strong>Medical Image Analysis:</strong> Analys av röntgen, MR och andra medicinska bilder.</li>
+                        <li><strong>Object Detection & Tracking:</strong> Identifierar och följer objekt i realtid (t.ex. i trafiken).</li>
+                        <li><strong>OCR & Document Extraction:</strong> Omvandlar bilder av text (t.ex. kvitton) till redigerbar data.</li>
+                        <li><strong>Video Analytics:</strong> Automatisk analys av videomaterial.</li>
+                        <li><strong>Visual Inspection & Quality Control:</strong> Automatisk kvalitetskontroll i industrin för att hitta defekter.</li>
+                    </ul>
+
+                    <h5>Språk & Ljud (NLP/Audio)</h5>
+                    <ul>
+                        <li><strong>Audio & Sound Analysis:</strong> Analys av icke-talat ljud (t.ex. maskinljud eller musik).</li>
+                        <li><strong>Conversational AI & Chatbots:</strong> Dialogsystem som kan föra samtal med användare.</li>
+                        <li><strong>GenAI (Image/Video/Audio):</strong> Genererar nytt visuellt eller audiellt innehåll.</li>
+                        <li><strong>Generative AI (Text/Code):</strong> Skapar ny text eller programkod baserat på instruktioner.</li>
+                        <li><strong>NLP & Text Analytics:</strong> Bearbetning och förståelse av mänskligt språk i textform.</li>
+                        <li><strong>Search & Information Retrieval:</strong> Smarta sökmotorer som förstår kontext och semantik.</li>
+                        <li><strong>Speech Recognition (STT/TTS):</strong> Omvandling av tal till text (Speech-to-Text) eller text till tal (Text-to-Speech).</li>
+                        <li><strong>Translation & Localization:</strong> Automatisk översättning mellan språk.</li>
+                    </ul>
+
+                    <h5>Optimering & Automation</h5>
+                    <ul>
+                        <li><strong>Optimization & Scheduling:</strong> Matematisk optimering för schemaläggning, logistikrutter och resursfördelning.</li>
+                        <li><strong>Process Automation (RPA/IPA):</strong> Automatisering av repetitiva administrativa arbetsuppgifter.</li>
+                        <li><strong>Robotics Control & Perception:</strong> AI som styr fysiska robotar.</li>
+                    </ul>
+
+                    <h5>Data & Infrastruktur</h5>
+                    <ul>
+                        <li><strong>Data Engineering & Pipelines / Processing:</strong> Infrastruktur för att samla, rena och flytta data.</li>
+                        <li><strong>Data Labeling & Annotation:</strong> Verktyg för att märka upp träningsdata till AI-modeller.</li>
+                        <li><strong>Data Quality & Monitoring:</strong> Övervakning av att data håller hög kvalitet.</li>
+                        <li><strong>Data Visualization:</strong> Avancerad visualisering av dataanalys.</li>
+                        <li><strong>Digital Twins:</strong> Digitala kopior av fysiska system för simulering och testning.</li>
+                        <li><strong>Edge AI & Embedded Systems:</strong> AI som körs direkt på enheten (t.ex. en kamera) istället för i molnet.</li>
+                        <li><strong>MLOps & Model Management:</strong> Verktyg för att drift, övervaka och hantera AI-modeller i produktion.</li>
+                        <li><strong>Model Compression:</strong> Teknik för att göra AI-modeller mindre och snabbare.</li>
+                        <li><strong>Privacy-Preserving AI:</strong> Tekniker för att använda AI utan att röja känslig data.</li>
+                        <li><strong>Sensor Fusion / Sensor & IoT Analytics:</strong> Kombinerar data från flera olika sensorer för en helhetsbild.</li>
+                        <li><strong>Synthetic Data & Simulation:</strong> Skapar konstgjord data för att träna modeller där verklig data saknas.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Suggestion Modal -->
+    <div id="suggestionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSuggestionModal()">&times;</span>
+            <div id="suggestionModalBody">
+                <h2>Föreslå nytt företag</h2>
+                <p class="suggestion-subtitle">Hjälp oss bygga en komplett databas över AI-företag i Sverige</p>
+
+                <form id="suggestionForm">
+                    <div class="form-group">
+                        <label for="suggestionCompanyName">Företagsnamn *</label>
+                        <input type="text" id="suggestionCompanyName" name="company_name" required placeholder="T.ex. AI Solutions AB">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="suggestionWebsite">Hemsida *</label>
+                        <input type="url" id="suggestionWebsite" name="website" required placeholder="https://exempel.se">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="suggestionAdditionalInfo">Ytterligare information (frivilligt)</label>
+                        <textarea id="suggestionAdditionalInfo" name="additional_info" rows="3" placeholder="Berätta gärna mer om företaget och varför det bör läggas till..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeSuggestionModal()">Avbryt</button>
+                        <button type="submit" class="btn-primary">Skicka förslag</button>
+                    </div>
+                </form>
+
+                <div id="suggestionSuccess" style="display: none;">
+                    <p class="success-message">✓ Tack för ditt företagsförslag! Vi kommer att granska det så snart som möjligt.</p>
+                    <button class="btn-primary" onclick="closeSuggestionModal()">Stäng</button>
+                </div>
+
+                <div id="suggestionError" style="display: none;">
+                    <p class="error-message">✗ Något gick fel. Försök igen senare.</p>
+                    <button class="btn-secondary" onclick="closeSuggestionModal()">Stäng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/companies/js/public_view.js"></script>
+</body>
+</html>
