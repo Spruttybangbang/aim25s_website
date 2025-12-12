@@ -916,16 +916,16 @@ function showCompanyModal(company) {
     scbDataHtml += '</div>';
 
     modalBody.innerHTML = `
-        <button class="modal-report-icon" onclick="openErrorReportModal(${company.id}, '${companyName.replace(/'/g, "\\'")}')" title="Rapportera fel">
-            <span class="material-symbols-outlined">report</span>
-            <span class="modal-report-text">Rapportera fel</span>
-        </button>
         ${logoHtml}
         <h2>${companyName}</h2>
         ${websiteHtml}
         ${basicInfoHtml}
         ${descriptionHtml}
         ${scbDataHtml}
+        <button class="modal-report-icon" onclick="openErrorReportModal(${company.id}, '${companyName.replace(/'/g, "\\'")}')" title="Rapportera fel">
+            <span class="material-symbols-outlined">report</span>
+            <span class="modal-report-text">Rapportera fel</span>
+        </button>
     `;
 
     // Add click handlers to bransch tags in modal

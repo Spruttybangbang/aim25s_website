@@ -1171,9 +1171,6 @@ tbody td a:hover {
 }
 
 .modal-report-icon {
-    position: absolute;
-    top: 4rem;
-    right: 2rem;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -1181,10 +1178,13 @@ tbody td a:hover {
     display: flex;
     flex-direction: row-reverse;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.5rem;
     transition: all 0.3s ease;
     border-radius: 6px;
-    z-index: 10;
+    margin-top: 2rem;
+    margin-left: auto;
+    width: fit-content;
 }
 
 .modal-report-icon:hover {
