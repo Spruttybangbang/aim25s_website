@@ -1,5 +1,10 @@
 # Svenska AI-företag | AIM25S
 
+![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat&logo=django)
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Production-4169E1?style=flat&logo=postgresql&logoColor=white)
+![Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=flat&logo=railway)
+
 > Interaktiv databas över svenska företag som använder AI & ML
 
 ## Om Projektet
