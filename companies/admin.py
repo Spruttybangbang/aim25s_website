@@ -424,7 +424,10 @@ class ErrorReportAdmin(admin.ModelAdmin):
     save_on_top = True
 
     def get_company_name(self, obj):
-        return obj.company.NAMN
+        """Visa företagsnamn, eller 'Företagsförslag' om det är ett nytt företag"""
+        if obj.company:
+            return obj.company.NAMN
+        return "– Företagsförslag –"
     get_company_name.short_description = "Företag"
     get_company_name.admin_order_field = 'company__NAMN'
 
