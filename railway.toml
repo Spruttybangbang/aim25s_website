@@ -2,6 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "gunicorn ai_companies_admin.wsgi"
+startCommand = "python manage.py migrate && gunicorn ai_companies_admin.wsgi"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
