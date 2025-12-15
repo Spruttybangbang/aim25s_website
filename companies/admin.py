@@ -3,6 +3,9 @@ from django.contrib import messages
 from django.http import HttpResponse
 import csv
 from datetime import datetime
+import os
+import json
+import requests
 from .models import (
     AICompany,
     PublicViewConfiguration,
@@ -163,6 +166,153 @@ class AICompanyAdmin(admin.ModelAdmin):
 
     readonly_fields = []  # Alla fält är redigerbara
 
+    def sync_from_google_sheets(self, request, queryset):
+        """
+        Synkronisera data från Google Sheets (admin action)
+        """
+        try:
+            # Hämta API key och Sheet ID från miljövariabler
+            api_key = os.environ.get('GOOGLE_SHEETS_API_KEY')
+            if not api_key:
+                # Try legacy credentials format
+                credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
+                if credentials_json:
+                    try:
+                        credentials = json.loads(credentials_json)
+                        # For service account, we can't use simple API key
+                        # Let user know they should use the management command instead
+                        self.message_user(
+                            request,
+                            'Google Sheets synkronisering kräver service account. '
+                            'Använd management command: python manage.py sync_sheets --sheet-id=YOUR_ID',
+                            messages.WARNING
+                        )
+                        return
+                    except json.JSONDecodeError:
+                        pass
+
+                self.message_user(
+                    request,
+                    'GOOGLE_SHEETS_API_KEY eller GOOGLE_SHEETS_CREDENTIALS saknas i miljövariabler',
+                    messages.ERROR
+                )
+                return
+
+            sheet_id = os.environ.get('GOOGLE_SHEETS_SPREADSHEET_ID')
+            if not sheet_id:
+                self.message_user(
+                    request,
+                    'GOOGLE_SHEETS_SPREADSHEET_ID saknas i miljövariabler',
+                    messages.ERROR
+                )
+                return
+
+            # Hämta data från Google Sheets
+            range_name = 'A:Z'  # Simplified range
+            url = f'https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{range_name}?key={api_key}'
+
+            response = requests.get(url, timeout=30)
+            if response.status_code != 200:
+                self.message_user(
+                    request,
+                    f'Kunde inte hämta data från Google Sheets: HTTP {response.status_code}',
+                    messages.ERROR
+                )
+                return
+
+            data = response.json()
+            rows = data.get('values', [])
+
+            if not rows:
+                self.message_user(request, 'Inga data hittades i sheetet', messages.WARNING)
+                return
+
+            # Första raden är headers
+            headers = rows[0]
+
+            # Uppdatera företag
+            updated_count = 0
+            created_count = 0
+
+            for row in rows[1:]:  # Skip header row
+                if not row:  # Skip empty rows
+                    continue
+
+                # Skapa dict med data
+                row_data = {}
+                for i, header in enumerate(headers):
+                    if i < len(row):
+                        row_data[header] = row[i]
+
+                # Hitta eller skapa företag baserat på id
+                company_id = row_data.get('id')
+                if not company_id:
+                    continue
+
+                try:
+                    company_id = int(company_id)
+                except (ValueError, TypeError):
+                    continue
+
+                # Uppdatera eller skapa
+                defaults = {}
+
+                # Map sheet columns to model fields
+                field_mapping = {
+                    'NAMN': 'NAMN',
+                    'SAJT': 'SAJT',
+                    'BESKRIVNING': 'BESKRIVNING',
+                    'STAD': 'STAD',
+                    'STORSTOCKHOLM': 'STORSTOCKHOLM',
+                    'URL_LOGOTYP': 'URL_LOGOTYP',
+                    'URL_KÄLLA': 'URL_KÄLLA',
+                    'AI_FÖRMÅGA_V2': 'AI_FÖRMÅGA_V2',
+                    'BRANSCHKLUSTER_V2': 'BRANSCHKLUSTER_V2',
+                    'ANSTÄLLDA_GRUPPERING_V2': 'ANSTÄLLDA_GRUPPERING_V2',
+                    'OMSÄTTNING_GRUPPERING_V2': 'OMSÄTTNING_GRUPPERING_V2',
+                    'Optimering & Automation': 'TILLAMPNING_OPTIMERING_AUTOMATION',
+                    'Språk & Ljud': 'TILLAMPNING_SPRAK_LJUD',
+                    'Prognos & Prediktion': 'TILLAMPNING_PROGNOS_PREDIKTION',
+                    'Infrastruktur & Data': 'TILLAMPNING_INFRASTRUKTUR_DATA',
+                    'Insikt & Analys': 'TILLAMPNING_INSIKT_ANALYS',
+                    'Visuell AI': 'TILLAMPNING_VISUELL_AI',
+                }
+
+                for sheet_col, model_field in field_mapping.items():
+                    if sheet_col in row_data:
+                        value = row_data[sheet_col]
+
+                        # Convert boolean fields
+                        if model_field.startswith('TILLAMPNING_'):
+                            value = value.lower() in ('true', 'yes', '1', 'ja') if value else False
+
+                        defaults[model_field] = value
+
+                company, created = AICompany.objects.update_or_create(
+                    id=company_id,
+                    defaults=defaults
+                )
+
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
+
+            self.message_user(
+                request,
+                f'Synkronisering klar: {created_count} skapade, {updated_count} uppdaterade',
+                messages.SUCCESS
+            )
+
+        except Exception as e:
+            self.message_user(
+                request,
+                f'Fel vid synkronisering: {str(e)}',
+                messages.ERROR
+            )
+
+    sync_from_google_sheets.short_description = "Synkronisera från Google Sheets"
+
     def export_selected_to_csv(self, request, queryset):
         """
         Exportera markerade/filtrerade företag till CSV för batch-redigering
@@ -251,7 +401,7 @@ class AICompanyAdmin(admin.ModelAdmin):
     export_selected_to_csv.short_description = "Exportera markerade företag till CSV"
 
     # Registrera actions
-    actions = ['export_selected_to_csv']
+    actions = ['sync_from_google_sheets', 'export_selected_to_csv']
 
 
 # ============================================================================
