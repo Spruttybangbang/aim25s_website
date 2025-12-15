@@ -18,36 +18,55 @@ class AICompany(models.Model):
     URL_LOGOTYP = models.TextField(blank=True, null=True, verbose_name="URL Logotyp")
     URL_KÄLLA = models.TextField(blank=True, null=True, verbose_name="URL Källa", db_column="URL_KÄLLA")
 
-    # Bransch och sektor (kommaseparerade text-fält)
-    BRANSCHKLUSTER_LITEN = models.TextField(blank=True, null=True, verbose_name="Branschkluster Liten")
-    BRANSCHKLUSTER_STOR = models.TextField(blank=True, null=True, verbose_name="Branschkluster Stor")
-    SEKTOR_SEMANTISK_MODELL = models.TextField(blank=True, null=True, verbose_name="Sektor (Semantisk Modell)")
-    SEKTOR_DETERMINISTISK_MODELL_1 = models.TextField(blank=True, null=True, verbose_name="Sektor (Deterministisk 1)")
-    SEKTOR_DETERMINISTISK_MODELL_2 = models.TextField(blank=True, null=True, verbose_name="Sektor (Deterministisk 2)")
-    SEKTOR_GAMMAL = models.TextField(blank=True, null=True, verbose_name="Sektor (Gammal)")
-    
     # Nya fält (version 2)
     AI_FÖRMÅGA_V2 = models.TextField(blank=True, null=True, verbose_name="AI-förmåga V2", db_column="AI-FÖRMÅGA_V2")
     BRANSCHKLUSTER_V2 = models.TextField(blank=True, null=True, verbose_name="Branschkluster V2")
     ANSTÄLLDA_GRUPPERING_V2 = models.TextField(blank=True, null=True, verbose_name="Anställda gruppering V2", db_column="ANSTÄLLDA_GRUPPERING_V2")
     OMSÄTTNING_GRUPPERING_V2 = models.TextField(blank=True, null=True, verbose_name="Omsättning gruppering V2", db_column="OMSÄTTNING_GRUPPERING_V2")
 
-
-    # AI-förmågor (kommaseparerade text-fält)
-    AI_FÖRMÅGA_SEMANTISK_MODELL = models.TextField(
-        blank=True, null=True,
-        verbose_name="AI-förmåga (Semantisk Modell)",
-        db_column="AI-FÖRMÅGA_SEMANTISK_MODELL"
+    # AI-tillämpningar (användningsområden)
+    TILLAMPNING_OPTIMERING_AUTOMATION = models.BooleanField(
+        default=False,
+        blank=True,
+        null=True,
+        verbose_name="Optimering & Automation",
+        db_column="Optimering & Automation"
     )
-    AI_FÖRMÅGA_GAMMAL = models.TextField(
-        blank=True, null=True,
-        verbose_name="AI-förmåga (Gammal)",
-        db_column="AI-FÖRMÅGA_GAMMAL"
+    TILLAMPNING_SPRAK_LJUD = models.BooleanField(
+        default=False,
+        blank=True,
+        null=True,
+        verbose_name="Språk & Ljud",
+        db_column="Språk & Ljud"
     )
-
-    # Metadata
-    KONFIDENS_SEMANTISK_MODELL = models.TextField(blank=True, null=True, verbose_name="Konfidens (Semantisk)")
-    ORGANISATIONSTYP_GAMMAL = models.TextField(blank=True, null=True, verbose_name="Organisationstyp (Gammal)")
+    TILLAMPNING_PROGNOS_PREDIKTION = models.BooleanField(
+        default=False,
+        blank=True,
+        null=True,
+        verbose_name="Prognos & Prediktion",
+        db_column="Prognos & Prediktion"
+    )
+    TILLAMPNING_INFRASTRUKTUR_DATA = models.BooleanField(
+        default=False,
+        blank=True,
+        null=True,
+        verbose_name="Infrastruktur & Data",
+        db_column="Infrastruktur & Data"
+    )
+    TILLAMPNING_INSIKT_ANALYS = models.BooleanField(
+        default=False,
+        blank=True,
+        null=True,
+        verbose_name="Insikt & Analys",
+        db_column="Insikt & Analys"
+    )
+    TILLAMPNING_VISUELL_AI = models.BooleanField(
+        default=False,
+        blank=True,
+        null=True,
+        verbose_name="Visuell AI",
+        db_column="Visuell AI"
+    )
 
     # SCB-data
     SCB_ORGNR = models.TextField(blank=True, null=True, verbose_name="SCB Organisationsnummer")
