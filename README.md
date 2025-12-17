@@ -11,6 +11,58 @@
 
 Detta projekt är en webbapp för att utforska svenska företag som arbetar med AI och maskininlärning. Databasen innehåller företagsinformation, AI-capabilities, bransch, och företagsdata från Bolagsverket.
 
+### Utvecklingsmiljöer
+
+**Production (`/`)**: Stabila releases med testet functionality
+- Tillgänglig för alla användare
+- Kör senaste stabila versionen (för närvarande v1.1)
+
+**Staging (`/staging/`)**: Utvecklingsmiljö för kommande features
+- Används för att testa nya features innan de går till production
+- Kan innehålla experimentella funktioner (v1.2, v1.3, etc.)
+- Endast tillgänglig när `DEBUG=True` (lokal utveckling)
+
+## Version History
+
+### Version 1.1 (2025-12-18)
+
+**Database Insights Dashboard:**
+- ✨ Klickbar databas-batterimätare som öppnar insights modal
+- 📊 5 visualiserade metrics med Chart.js (geografisk spridning, bransch, tillämpningar, omsättning, anställda)
+- 📈 Scrollbar dashboard med editorial design
+- 🔢 Översikt visar: 613 företag totalt, 37 variabler data, 22 817 celler data
+- ℹ️ Hjälptext med animerad pil: "Klicka här för mer datainfo"
+
+**Filter & Display Improvements:**
+- 🔍 Multi-select filter för alla kategorier (bransch, anställda, omsättning, tillämpningar)
+- 📦 Expanderbara/minimerade filter sections med smooth animationer
+- 🏷️ Kolumn "AI/ML-tillämpning" ersätter AI-inriktning i tabellen
+- 🎨 Tillämpnings-tags transparenta by default, gröna vid hover
+- 🖱️ Klickbara bransch- och tillämpnings-tags fungerar som filter
+- 🧹 "Rensa alla filter" minimerar automatiskt alla filter-sektioner
+- 📱 Förbättrad UX med Material Design easing curves
+
+**UI/UX Polering:**
+- 🎯 Underrubrik på separat rad från huvudrubrik
+- 🔍 "AI/ML-tillämpning" filter stängt by default (som andra filter)
+- 🔤 Större batterimätare-text (50% större för bättre läsbarhet)
+- 🎨 Global meny hover-färger: hjälp (röd), lägg till företag (grön), logga ut (svart)
+- 📖 Hjälp-modal uppdaterad med 6 AI/ML-tillämpningskategorier
+- 📋 Förkortad och tydligare version history modal
+- 🗑️ Företags-modal utan AI-inriktning sektion
+
+**Technical Improvements:**
+- ⚡ Server-side filtering för alla tillämpningar (visar alla matchande företag, inte bara 50)
+- 🔄 Optimerad boolean-konvertering för Google Sheets sync (STORSTOCKHOLM + tillämpningar)
+- 💾 6 nya tillämpningsfält i databasen:
+  - Optimering & Automation
+  - Språk & Ljud
+  - Prognos & Prediktion
+  - Infrastruktur & Data
+  - Insikt & Analys
+  - Visuell AI
+- 🎭 Smooth filter-animationer med cubic-bezier easing (0.4s duration)
+
 ### Features
 
 - 🔍 Sökfunktion med realtidsfiltrering
@@ -93,6 +145,102 @@ python manage.py runserver
 ```
 
 Öppna: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+## Staging Environment (Lokal Testmiljö)
+
+Projektet har en inbyggd staging-miljö för att testa ändringar innan de går live.
+
+### Vad är Staging?
+
+Staging är en **separat URL** (`/staging/`) som endast fungerar lokalt när `DEBUG=True`. Den använder kopior av produktionsfilerna så du kan experimentera fritt utan att påverka live-siten.
+
+### Hur Fungerar Det?
+
+**Staging består av:**
+- `/staging/` - Separat URL route (endast lokalt)
+- `public_view_staging.html` - Kopia av produktionens template
+- `public_view_staging.css` - Kopia av produktionens CSS
+- `public_view_staging.js` - Kopia av produktionens JavaScript
+
+**Database-koppling:**
+Staging använder **samma databaskonfiguration** som resten av applikationen:
+- **Med `DATABASE_URL` i .env** → Staging använder Railway PostgreSQL (samma som live)
+- **Utan `DATABASE_URL`** → Staging använder lokal SQLite
+
+### Använda Staging
+
+**1. Öppna staging lokalt:**
+```bash
+# Kontrollera att DEBUG=True i .env
+python manage.py runserver
+```
+Gå till: [http://127.0.0.1:8000/staging/](http://127.0.0.1:8000/staging/)
+
+Du ser en orange banner: 🚧 STAGING ENVIRONMENT - Endast synlig lokalt
+
+**2. Gör ändringar:**
+Redigera staging-filerna:
+- `companies/templates/companies/public_view_staging.html`
+- `companies/static/companies/css/public_view_staging.css`
+- `companies/static/companies/js/public_view_staging.js`
+
+Ladda om `/staging/` för att se dina ändringar.
+
+**3. Testa mot riktig data (valfritt):**
+Om du vill testa med Railway-datan, lägg till i `.env`:
+```
+DATABASE_URL=postgresql://postgres:...@railway.app/railway
+```
+
+**4. Promovera till produktion:**
+När du är nöjd med staging, kopiera filerna:
+
+```bash
+# Backup först (säkerhet!)
+cp companies/templates/companies/public_view.html companies/templates/companies/public_view.backup.html
+cp companies/static/companies/css/public_view.css companies/static/companies/css/public_view.backup.css
+cp companies/static/companies/js/public_view.js companies/static/companies/js/public_view.backup.js
+
+# Kopiera staging → produktion
+cp companies/templates/companies/public_view_staging.html companies/templates/companies/public_view.html
+cp companies/static/companies/css/public_view_staging.css companies/static/companies/css/public_view.css
+cp companies/static/companies/js/public_view_staging.js companies/static/companies/js/public_view.js
+```
+
+**5. Rensa staging-markeringar:**
+Öppna `companies/templates/companies/public_view.html` och:
+- Ta bort `STAGING - ` från `<title>` tag
+- Ta bort den orange staging-bannern
+- Uppdatera CSS-referens från `public_view_staging.css` → `public_view.css`
+- Uppdatera JS-referens från `public_view_staging.js` → `public_view.js`
+
+**6. Deploy till Railway:**
+```bash
+git add companies/templates/companies/public_view.html \
+        companies/static/companies/css/public_view.css \
+        companies/static/companies/js/public_view.js
+
+git commit -m "Update public_view with new features from staging"
+git push origin main
+```
+
+### Viktiga Detaljer
+
+- ✅ **Endast lokalt** - Staging fungerar bara när `DEBUG=True` (aldrig på Railway)
+- ✅ **Inte i git** - Staging-filer är listade i `.gitignore` och pushas inte till GitHub
+- ✅ **Samma API** - Staging använder samma backend-endpoints som produktionen
+- ⚠️ **Database** - Om du använder Railway-databasen, påverkar staging-actions (felanmälningar etc.) live-datan
+
+### Felsökning
+
+**Problem:** `/staging/` ger 404
+**Lösning:** Kontrollera att `DEBUG=True` i din `.env` fil
+
+**Problem:** Staging ser identisk ut med produktionen
+**Lösning:** Kontrollera att staging-filerna har orange banner och "STAGING" i titeln
+
+**Problem:** Ändringar syns inte
+**Lösning:** Ladda om sidan med Cmd+Shift+R (hard refresh) för att cleara cache
 
 ## Deployment (Railway)
 
@@ -221,12 +369,15 @@ aim-internships/
 │   ├── migrations/           # Database migrations
 │   ├── static/companies/     # Static files
 │   │   ├── css/
-│   │   │   └── public_view.css  # Main stylesheet
+│   │   │   ├── public_view.css         # Production stylesheet
+│   │   │   └── public_view_staging.css # Staging stylesheet (gitignored)
 │   │   └── js/
-│   │       └── public_view.js   # Main JavaScript
+│   │       ├── public_view.js          # Production JavaScript
+│   │       └── public_view_staging.js  # Staging JavaScript (gitignored)
 │   ├── templates/companies/  # HTML templates
-│   │   ├── public_view.html  # Public-facing view
-│   │   └── login.html        # Login page
+│   │   ├── public_view.html         # Production view
+│   │   ├── public_view_staging.html # Staging view (gitignored)
+│   │   └── login.html               # Login page
 │   ├── admin.py              # Admin configuration
 │   ├── models.py             # Database models
 │   ├── views.py              # Views & API endpoints

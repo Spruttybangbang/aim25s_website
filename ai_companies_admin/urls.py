@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
+from django.conf import settings
 from companies import views
 
 urlpatterns = [
@@ -32,4 +33,12 @@ urlpatterns = [
     path("api/filter-options/", views.get_filter_options, name="get_filter_options"),
     # Error reporting
     path("api/report-error/", views.report_error, name="report_error"),
+    # Database statistics
+    path("api/database-stats/", views.get_database_stats, name="get_database_stats"),
 ]
+
+# Lägg till staging-route endast när DEBUG=True (lokalt)
+if settings.DEBUG:
+    urlpatterns.append(
+        path('staging/', views.staging_view, name='staging_view')
+    )

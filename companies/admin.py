@@ -283,7 +283,7 @@ class AICompanyAdmin(admin.ModelAdmin):
                         value = row_data[sheet_col]
 
                         # Convert boolean fields
-                        if model_field.startswith('TILLAMPNING_'):
+                        if model_field.startswith('TILLAMPNING_') or model_field == 'STORSTOCKHOLM':
                             value = value.lower() in ('true', 'yes', '1', 'ja') if value else False
 
                         defaults[model_field] = value

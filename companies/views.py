@@ -1,10 +1,9 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 from .models import AICompany, PublicViewConfiguration
@@ -101,6 +100,14 @@ def public_view(request):
     return render(request, 'companies/public_view.html')
 
 
+@login_required(login_url='login')
+def staging_view(request):
+    """
+    Staging-version av public view (endast tillgänglig lokalt när DEBUG=True)
+    """
+    return render(request, 'companies/public_view_staging.html')
+
+
 def get_column_config(request):
     """
     API endpoint för att hämta kolumnkonfiguration
@@ -182,20 +189,23 @@ def get_companies(request):
     if stockholm == 'true':
         companies = companies.filter(STORSTOCKHOLM=True)
 
-    # Filter: Bransch
-    bransch = request.GET.get('bransch', '')
-    if bransch:
-        companies = companies.filter(BRANSCHKLUSTER_V2__icontains=bransch)
+    # Filter: Bransch (multi-select)
+    bransch_filters = request.GET.getlist('bransch')
+    if bransch_filters:
+        bransch_q = Q()
+        for b in bransch_filters:
+            bransch_q |= Q(BRANSCHKLUSTER_V2__iexact=b)
+        companies = companies.filter(bransch_q)
 
-    # Filter: Antal anställda (V2)
-    anstallda = request.GET.get('anstallda', '')
-    if anstallda:
-        companies = companies.filter(ANSTÄLLDA_GRUPPERING_V2=anstallda)
+    # Filter: Antal anställda (V2) (multi-select)
+    anstallda_filters = request.GET.getlist('anstallda')
+    if anstallda_filters:
+        companies = companies.filter(ANSTÄLLDA_GRUPPERING_V2__in=anstallda_filters)
 
-    # Filter: Omsättning (V2)
-    omsattning = request.GET.get('omsattning', '')
-    if omsattning:
-        companies = companies.filter(OMSÄTTNING_GRUPPERING_V2=omsattning)
+    # Filter: Omsättning (V2) (multi-select)
+    omsattning_filters = request.GET.getlist('omsattning')
+    if omsattning_filters:
+        companies = companies.filter(OMSÄTTNING_GRUPPERING_V2__in=omsattning_filters)
 
     # Filter: Registrerad arbetsgivare
     arbetsgivare = request.GET.get('arbetsgivare', '')
@@ -213,6 +223,30 @@ def get_companies(request):
         companies = companies.filter(
             Q(AI_FÖRMÅGA_V2__icontains=tag)
         )
+
+    # Filter: Tillämpning (multi-select)
+    tillampning_filters = request.GET.getlist('tillampning')
+    if tillampning_filters:
+        tillampning_q = Q()
+
+        # Map frontend labels to backend field names
+        tillampning_mapping = {
+            'Optimering & Automation': 'TILLAMPNING_OPTIMERING_AUTOMATION',
+            'Språk & Ljud': 'TILLAMPNING_SPRAK_LJUD',
+            'Prognos & Prediktion': 'TILLAMPNING_PROGNOS_PREDIKTION',
+            'Infrastruktur & Data': 'TILLAMPNING_INFRASTRUKTUR_DATA',
+            'Insikt & Analys': 'TILLAMPNING_INSIKT_ANALYS',
+            'Visuell AI': 'TILLAMPNING_VISUELL_AI',
+        }
+
+        # Build OR query for selected tillämpningar
+        for tillampning in tillampning_filters:
+            field_name = tillampning_mapping.get(tillampning)
+            if field_name:
+                tillampning_q |= Q(**{field_name: True})
+
+        if tillampning_q:
+            companies = companies.filter(tillampning_q)
 
     # Paginering
     page = int(request.GET.get('page', 1))
@@ -255,6 +289,14 @@ def get_companies(request):
 
             # V2 fields (pipe-separated)
             'ai_capabilities': company.AI_FÖRMÅGA_V2 or '',
+
+            # Tillämpning fields (Boolean)
+            'tillampning_optimering_automation': company.TILLAMPNING_OPTIMERING_AUTOMATION,
+            'tillampning_sprak_ljud': company.TILLAMPNING_SPRAK_LJUD,
+            'tillampning_prognos_prediktion': company.TILLAMPNING_PROGNOS_PREDIKTION,
+            'tillampning_infrastruktur_data': company.TILLAMPNING_INFRASTRUKTUR_DATA,
+            'tillampning_insikt_analys': company.TILLAMPNING_INSIKT_ANALYS,
+            'tillampning_visuell_ai': company.TILLAMPNING_VISUELL_AI,
 
             # Fields that don't exist in new model (removed from frontend)
             'type': None,
@@ -409,3 +451,66 @@ def report_error(request):
     except Exception as e:
         print(f'Error creating report: {str(e)}')
         return JsonResponse({'error': 'Server error'}, status=500)
+
+
+@login_required(login_url='login')
+def get_database_stats(request):
+    """
+    Returnera aggregerad statistik för database insights modal
+    """
+    companies = AICompany.objects.all()
+    total_count = companies.count()
+
+    # 1. Geographic Distribution (top 5 cities + others)
+    city_stats = companies.exclude(
+        STAD__isnull=True
+    ).exclude(
+        STAD=''
+    ).values('STAD').annotate(count=Count('id')).order_by('-count')[:5]
+
+    city_data = list(city_stats)
+    top_5_total = sum(item['count'] for item in city_data)
+    others_count = total_count - top_5_total
+
+    if others_count > 0:
+        city_data.append({'STAD': 'Övriga', 'count': others_count})
+
+    # 2. Industry Distribution (bransch)
+    bransch_stats = companies.exclude(
+        BRANSCHKLUSTER_V2__isnull=True
+    ).exclude(
+        BRANSCHKLUSTER_V2=''
+    ).values('BRANSCHKLUSTER_V2').annotate(count=Count('id')).order_by('-count')
+
+    # 3. Application Distribution (6 TILLAMPNING fields)
+    application_stats = {
+        'Optimering & Automation': companies.filter(TILLAMPNING_OPTIMERING_AUTOMATION=True).count(),
+        'Språk & Ljud': companies.filter(TILLAMPNING_SPRAK_LJUD=True).count(),
+        'Prognos & Prediktion': companies.filter(TILLAMPNING_PROGNOS_PREDIKTION=True).count(),
+        'Infrastruktur & Data': companies.filter(TILLAMPNING_INFRASTRUKTUR_DATA=True).count(),
+        'Insikt & Analys': companies.filter(TILLAMPNING_INSIKT_ANALYS=True).count(),
+        'Visuell AI': companies.filter(TILLAMPNING_VISUELL_AI=True).count(),
+    }
+
+    # 4. Revenue Distribution
+    revenue_stats = companies.exclude(
+        OMSÄTTNING_GRUPPERING_V2__isnull=True
+    ).exclude(
+        OMSÄTTNING_GRUPPERING_V2=''
+    ).values('OMSÄTTNING_GRUPPERING_V2').annotate(count=Count('id')).order_by('-count')
+
+    # 5. Employee Distribution
+    employee_stats = companies.exclude(
+        ANSTÄLLDA_GRUPPERING_V2__isnull=True
+    ).exclude(
+        ANSTÄLLDA_GRUPPERING_V2=''
+    ).values('ANSTÄLLDA_GRUPPERING_V2').annotate(count=Count('id')).order_by('-count')
+
+    return JsonResponse({
+        'total_companies': total_count,
+        'geographic': city_data,
+        'bransch': list(bransch_stats),
+        'applications': application_stats,
+        'revenue': list(revenue_stats),
+        'employees': list(employee_stats),
+    })
