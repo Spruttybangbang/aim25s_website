@@ -144,24 +144,37 @@ class Command(BaseCommand):
         """
         Konverterar en rad till dict med rätt fältnamn
         """
+        # Map Google Sheets tillämpning column names to model field names
+        tillampning_mapping = {
+            'Optimering & Automation': 'TILLAMPNING_OPTIMERING_AUTOMATION',
+            'Språk & Ljud': 'TILLAMPNING_SPRAK_LJUD',
+            'Prognos & Prediktion': 'TILLAMPNING_PROGNOS_PREDIKTION',
+            'Infrastruktur & Data': 'TILLAMPNING_INFRASTRUKTUR_DATA',
+            'Insikt & Analys': 'TILLAMPNING_INSIKT_ANALYS',
+            'Visuell AI': 'TILLAMPNING_VISUELL_AI',
+        }
+
         row_dict = {}
         for i, header in enumerate(headers):
             value = row[i] if i < len(row) else None
 
+            # Map tillämpning column names
+            field_name = tillampning_mapping.get(header, header)
+
             # Hantera tomma värden
             if value == '' or value is None:
-                row_dict[header] = None
-            # Boolean-konvertering för STORSTOCKHOLM
-            elif header == 'STORSTOCKHOLM':
-                row_dict[header] = self.parse_boolean(value)
+                row_dict[field_name] = None
+            # Boolean-konvertering för STORSTOCKHOLM och TILLAMPNING fields
+            elif field_name == 'STORSTOCKHOLM' or field_name.startswith('TILLAMPNING_'):
+                row_dict[field_name] = self.parse_boolean(value)
             # ID ska vara integer
-            elif header == 'id':
+            elif field_name == 'id':
                 try:
-                    row_dict[header] = int(value) if value else None
+                    row_dict[field_name] = int(value) if value else None
                 except ValueError:
-                    row_dict[header] = None
+                    row_dict[field_name] = None
             else:
-                row_dict[header] = value
+                row_dict[field_name] = value
 
         return row_dict
 
